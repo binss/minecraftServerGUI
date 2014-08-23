@@ -19,17 +19,25 @@ public:
     ~Widget();
 
 private slots:
-    void on_pushButton_clicked();
-
-    void on_pushButton_2_clicked();
-
     void catchOutput();
 
 
     void on_pushButton_3_clicked();
 
+    void on_startButton_clicked();
+
+    void on_stopButton_clicked();
+
+    void on_pathButton_clicked();
+
+    void on_minHorizontalSlider_valueChanged(int value);
+
+
+    void on_maxHorizontalSlider_valueChanged(int value);
+
 private:
     Ui::Widget *ui;
+
 
 };
 
