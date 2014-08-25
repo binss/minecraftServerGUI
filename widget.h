@@ -17,6 +17,8 @@ public:
     explicit Widget(QWidget *parent = 0);
     QProcess *proc;
     void updateSettings(QString key,bool value);
+    void loadServerSettings();
+
     ~Widget();
 
 private slots:
@@ -49,8 +51,12 @@ private:
     QTimer *timer;
     int runningTime;
 
-    QString serverPath;
+    QString jarPath;
+    QString jarName;
+
     QSettings *settings;
+    QSettings *GUIsettings;
+
 };
 
 #endif // WIDGET_H

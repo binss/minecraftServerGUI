@@ -7,7 +7,7 @@
 
 #include <QFileDialog>
 #include <math.h>
-
+#include <QMessageBox>
 
 using namespace std;
 
@@ -22,20 +22,48 @@ Widget::Widget(QWidget *parent) :
     updateTimer = new QTimer();
     timer = new QTimer();
     info_mark = 0;
+    jarName = "";
+    jarPath = "";
 
     connect(updateTimer,SIGNAL(timeout()),this,SLOT(updateInfo()));
     connect(timer,SIGNAL(timeout()),this,SLOT(updateRunningTime()));
 
-    QString path="/Users/bin/Desktop/bukkitServer/server.properties";
-    settings = new QSettings(path,QSettings::IniFormat);
-    if(settings->value("server-port","-1").toInt() == -1)
+    GUIsettings = new QSettings(QString("%1/settings.ini").arg(QDir::currentPath()),QSettings::IniFormat);
+    if(GUIsettings->value("jarPath","").toString() == "")
     {
-        qDebug()<<"配置文件读取失败";
-        ui->generalTextBrowser->append(QString("[%1]:     配置文件读取失败").arg(QTime::currentTime().toString()));
+        ui->generalTextBrowser->append(QString("[%1]:     GUI配置文件读取失败").arg(QTime::currentTime().toString()));
     }
     else
     {
-        ui->generalTextBrowser->append(QString("[%1]:     配置文件读取成功").arg(QTime::currentTime().toString()));
+        ui->generalTextBrowser->append(QString("[%1]:     GUI配置文件读取成功").arg(QTime::currentTime().toString()));
+        jarPath = GUIsettings->value("jarPath","").toString();
+        jarName = GUIsettings->value("jarName","").toString();
+        ui->jarLineEdit->setText(QString("%1/%2").arg(jarPath).arg(jarName));
+        loadServerSettings();
+    }
+
+
+}
+
+Widget::~Widget()
+{
+    delete ui;
+}
+
+void Widget::loadServerSettings()
+{
+    ui->serverSettingGroupBox->setEnabled(true);
+
+    QString path = QString("%1/server.properties").arg(jarPath);
+    settings = new QSettings(path,QSettings::IniFormat);
+    if(settings->value("server-port","-1").toInt() == -1)
+    {
+        qDebug()<<"服务端配置文件读取失败";
+        ui->generalTextBrowser->append(QString("[%1]:     服务端配置文件读取失败").arg(QTime::currentTime().toString()));
+    }
+    else
+    {
+        ui->generalTextBrowser->append(QString("[%1]:     服务端配置文件读取成功").arg(QTime::currentTime().toString()));
 
         ui->maxUserSpinBox->setValue(settings->value("max-players","0").toInt());
         ui->portLineEdit->setText(settings->value("server-port","0").toString());
@@ -45,16 +73,8 @@ Widget::Widget(QWidget *parent) :
         ui->netherCheckBox->setChecked(settings->value("allow-nether","0").toBool());
         ui->pvpCheckBox->setChecked(settings->value("pvp","0").toBool());
         ui->onlineCheckBox->setChecked(settings->value("online-mode","0").toBool());
-
     }
 }
-
-Widget::~Widget()
-{
-    delete ui;
-}
-
-
 
 void Widget::catchOutput()
 {
@@ -143,6 +163,7 @@ void Widget::catchOutput()
                 proc->write("pl\n");
                 updateInfo();
                 updateTimer->start(10000);
+                runningTime = 0;
                 timer->start(1000);
             }
         }
@@ -158,7 +179,7 @@ void Widget::updateInfo()
 void Widget::updateRunningTime()
 {
     runningTime++;
-    ui->runningTimeLabel->setText(QString("%1时%2分%3秒").arg(runningTime/3600).arg(runningTime /60 % 60).arg(runningTime % 60 % 60));
+    ui->runningTimeLabel->setText(QString("%1 时 %2 分 %3 秒").arg(runningTime/3600).arg(runningTime /60 % 60).arg(runningTime % 60 % 60));
 }
 
 void Widget::updateSettings(QString key,bool value)
@@ -171,6 +192,17 @@ void Widget::updateSettings(QString key,bool value)
 
 void Widget::on_startButton_clicked()
 {
+    if(ui->minHorizontalSlider->value() > ui->maxHorizontalSlider->value())
+    {
+        QMessageBox::warning(NULL, "警告", "最大内存应大于等于初始内存!", QMessageBox::Yes);
+        return;
+    }
+    if(ui->jarLineEdit->text() == "")
+    {
+        QMessageBox::warning(NULL, "警告", "请选择服务端的jar文件!", QMessageBox::Yes);
+        return;
+    }
+
         //修改配置文件
         settings->setValue("max-players",ui->maxUserSpinBox->value());
         settings->setValue("server-port",ui->portLineEdit->text());
@@ -183,7 +215,7 @@ void Widget::on_startButton_clicked()
 
 
     //设置进程工作目录
-    QDir::setCurrent("/Users/bin/Desktop/bukkitServer");
+    QDir::setCurrent(jarPath);
     qDebug()<<QDir::currentPath();
 
     proc = new QProcess(this);
@@ -191,7 +223,7 @@ void Widget::on_startButton_clicked()
 
     QStringList arguments;
     arguments << QString("-Xms%1").arg(ui->minLabel->text()) << QString("-Xmx%1").arg(ui->maxLabel->text())<<"-Dfile.encoding=UTF-8"<<
-                 "-jar" << "craftbukkit-1.7.9-R0.2.jar";
+                 "-jar" << jarName;
     proc->setProcessChannelMode(QProcess::MergedChannels);
     proc->start("java",arguments);
 
@@ -245,8 +277,9 @@ void Widget::on_pushButton_3_clicked()
 //        case 2:state = "Running";
 //    }
 //    qDebug()<<state;
-    proc->write("memory\n");
-
+//    proc->write("memory\n");
+    GUIsettings->setValue("jarPath",jarPath);
+    GUIsettings->setValue("jarName",jarName);
 }
 
 void Widget::on_pathButton_clicked()
@@ -263,8 +296,14 @@ void Widget::on_pathButton_clicked()
          if(rx.exactMatch(path))
          {
             ui->jarLineEdit->setText(path);
-            serverPath = QFileInfo(path).absolutePath();
-            qDebug()<<serverPath;
+            QFileInfo fileInfo = QFileInfo(path);
+            jarPath = fileInfo.absolutePath();
+            jarName = fileInfo.fileName();
+            GUIsettings->setValue("jarPath",jarPath);
+            GUIsettings->setValue("jarName",jarName);
+
+            loadServerSettings();
+
          }
     }
 }
