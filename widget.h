@@ -41,6 +41,8 @@ private slots:
     void updateRunningTime();
 
 
+    void on_pushButton_clicked();
+
 private:
     Ui::Widget *ui;
     int info_mark;

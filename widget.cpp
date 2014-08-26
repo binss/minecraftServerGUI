@@ -327,3 +327,56 @@ void Widget::on_maxHorizontalSlider_valueChanged(int value)
 
 
 
+
+void Widget::on_pushButton_clicked()
+{
+    QFile file("/Users/bin/Desktop/bukkitServer/plugins/GroupManager/worlds/world/users.yml");
+
+    if(!file.open(QIODevice::ReadWrite | QIODevice::Text))
+    {
+        qDebug()<<"Can't open the file!"<<endl;
+        return;
+    }
+    QRegExp user_rx(".*-.*-.*-.*-.*:.*");
+    QRegExp user_name_rx(".*lastname: (.*)");
+    QRegExp user_group_rx(".*group: (.*)");
+    QRegExp user_hasPermission_rx(".*permissions: [].*");
+    QRegExp user_permissions_rx(".*- (.*)");
+    bool notNeedRead = false;
+
+    while(!file.atEnd())
+    {
+        if(notNeedRead || user_rx.exactMatch(file.readLine()))
+        {
+            notNeedRead = false;
+            QString name_line = file.readLine();
+            QString group_line = file.readLine();
+            file.readLine();        //subgroup
+            QString permission_line = file.readLine();
+            name_line.indexOf(user_name_rx);
+            group_line.indexOf(user_group_rx);
+            qDebug()<< user_name_rx.cap(1).simplified();
+            qDebug()<< user_group_rx.cap(1).simplified();
+            if(user_hasPermission_rx.exactMatch(permission_line))
+            {
+                qDebug()<< "无";
+            }
+            else
+            {
+                while(!file.atEnd())
+                {
+                    QString permissions = file.readLine();
+                    int pos = permissions.indexOf(user_permissions_rx);
+                    if(pos>=0)
+                    {
+                        qDebug()<< user_permissions_rx.cap(1);
+                    }
+                    else
+                        notNeedRead = true;
+                        break;
+                }
+            }
+
+        }
+    }
+}
